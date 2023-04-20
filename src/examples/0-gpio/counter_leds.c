@@ -6,22 +6,19 @@
 // Fonte:
 // https://gitlab.com/fse_fga/gpio-raspberry-pi/-/blob/master/c/led_botao.c
 
-/*
- * Configuração dos pinos dos LEDs e Botão
- */
-#define LED_1 RPI_V2_GPIO_P1_05
-#define LED_2 RPI_V2_GPIO_P5_06
-#define LED_4 RPI_V2_GPIO_P1_13
-#define LED_8 RPI_V2_GPIO_P1_19
+#define LED_1 RPI_V2_GPIO_P1_29
+#define LED_2 RPI_V2_GPIO_P1_31
+#define LED_4 RPI_V2_GPIO_P1_33
+#define LED_8 RPI_V2_GPIO_P1_35
 
-#define BUTTN RPI_V2_GPIO_P1_11
+#define BUTTN RPI_V2_GPIO_P1_21
 
 void configure_pins()
 {
     // Define botão como entrada
     bcm2835_gpio_fsel(BUTTN, BCM2835_GPIO_FSEL_INPT);
     // Configura entrada do botão como Pull-up
-    bcm2835_gpio_set_pud(BUTTN, BCM2835_GPIO_PUD_UP);
+    bcm2835_gpio_set_pud(BUTTN, BCM2835_GPIO_PUD_DOWN);
 
     // Configura pinos dos LEDs como saídas
     bcm2835_gpio_fsel(LED_1, BCM2835_GPIO_FSEL_OUTP);
@@ -70,9 +67,10 @@ int main(int argc, char **argv)
                 counter = 0;
             }
 
+            printf("counter %02d\n", counter);
             activate_leds(counter);
             counter++;
-            delay(1000);
+            delay(1500);
         }
     }
 }
