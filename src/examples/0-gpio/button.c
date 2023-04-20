@@ -9,18 +9,19 @@
 /*
  * Configuração dos pinos dos LEDs e Botão
  */
-#define LED_1 RPI_V2_GPIO_P1_40 // BCM 21
-#define LED_2 RPI_V2_GPIO_P1_38 // BCM 20
-#define LED_4 RPI_V2_GPIO_P1_36 // BCM 16
-#define LED_8 RPI_V2_GPIO_P1_32 // BCM 26
-#define BOTAO RPI_V2_GPIO_P1_05 // BCM 3
+#define LED_1 RPI_V2_GPIO_P1_05
+#define LED_2 RPI_V2_GPIO_P5_06
+#define LED_4 RPI_V2_GPIO_P1_13
+#define LED_8 RPI_V2_GPIO_P1_19
+
+#define BUTTN RPI_V2_GPIO_P1_11
 
 void configure_pins()
 {
     // Define botão como entrada
-    bcm2835_gpio_fsel(BOTAO, BCM2835_GPIO_FSEL_INPT);
+    bcm2835_gpio_fsel(BUTTN, BCM2835_GPIO_FSEL_INPT);
     // Configura entrada do botão como Pull-up
-    bcm2835_gpio_set_pud(BOTAO, BCM2835_GPIO_PUD_UP);
+    bcm2835_gpio_set_pud(BUTTN, BCM2835_GPIO_PUD_UP);
 
     // Configura pinos dos LEDs como saídas
     bcm2835_gpio_fsel(LED_1, BCM2835_GPIO_FSEL_OUTP);
@@ -41,6 +42,7 @@ void handle_interruption(int sinal)
 {
     activate_leds(0);
     bcm2835_close();
+    printf("closing program...\n");
     exit(0);
 }
 
@@ -61,7 +63,7 @@ int main(int argc, char **argv)
         counter = 0;
         while (counter < 16)
         {
-            while (!bcm2835_gpio_lev(BOTAO))
+            while (!bcm2835_gpio_lev(BUTTN))
             {
                 printf("Botão reset pressionado\n");
                 activate_leds(15);
