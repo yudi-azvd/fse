@@ -31,10 +31,10 @@ void uart_proto_perror(char* msg = NULL) {
         printf("%s%s\n", msg, uart_proto_error);
 }
 
-typedef struct Base {
+typedef struct _Base {
     int uart0_filestream;
     termios options;
-} Base;
+} _Base;
 
 #define init_signature(p)   \
     {                       \
@@ -72,7 +72,7 @@ WriteIntPacket WriteIntPacket_init(u8 code, int data) {
     return p;
 }
 
-int uart_proto_init(Base* b, char* device = NULL) {
+int _uart_proto_init(_Base* b, char* device = NULL) {
     b->uart0_filestream = -1;
     if (device)
         b->uart0_filestream = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
@@ -97,38 +97,50 @@ int uart_proto_init(Base* b, char* device = NULL) {
     return b->uart0_filestream;
 }
 
-int uart_proto_destroy(Base* b) {
+int _uart_proto_destroy(_Base* b) {
     close(b->uart0_filestream);
     return 0;
 }
 
-int uart_proto_read_int(Base* b, int* result) {
+int uart_proto_read_int(int* result) {
+    _Base b;
+    _uart_proto_init(&b);
+
     RequestPacket p = RequestPacket_init(READ_INT);
     ssize_t packet_size = sizeof(RequestPacket);
-    ssize_t written = write(b->uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart0_filestream, &p, packet_size);
     if (written < 0) {
+        perror("UART proto write");
     }
 
     int data;
-    ssize_t read_size = read(b->uart0_filestream, &data, 4);
+    ssize_t read_size = read(b.uart0_filestream, &data, 4);
     if (read_size < 0) {
+        perror("UART proto read");
     }
     *result = data;
+
+    _uart_proto_destroy(&b);
     return 0;
 }
 
-int uart_proto_write_int(Base* b, int data) {
+int uart_proto_write_int(int data) {
+    _Base b;
+    _uart_proto_init(&b);
+
     WriteIntPacket p;
     p.data = data;
     p.code = WRITE_INT;
     ssize_t packet_size = sizeof(p);
-    ssize_t written = write(b->uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart0_filestream, &p, packet_size);
     if (written < 0) {
     }
 
-    ssize_t read_size = read(b->uart0_filestream, &data, 4);
+    ssize_t read_size = read(b.uart0_filestream, &data, 4);
     if (read_size < 0) {
     }
+
+    _uart_proto_destroy(&b);
     return 0;
 }
 

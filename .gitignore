@@ -2,3 +2,4 @@
 *.out
 uart
 tmp
+*.dump
