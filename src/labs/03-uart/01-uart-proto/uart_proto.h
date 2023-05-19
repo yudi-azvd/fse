@@ -89,6 +89,21 @@ WriteFloatPacket WriteFloatPacket_init(float data) {
     return p;
 }
 
+#pragma pack(1)
+typedef struct WriteStrPacket {
+    u8 code;
+    char* data;
+    u8 signature[4];
+} WriteStrPacket;
+
+WriteStrPacket WriteStrPacket_init(char* data) {
+    WriteStrPacket p;
+    init_signature(p);
+    p.code = WRITE_FLOAT;
+    p.data = data;
+    return p;
+}
+
 int _uart_proto_init(_Base* b, char* device = NULL) {
     b->uart0_filestream = -1;
     if (device)
@@ -159,6 +174,36 @@ int uart_proto_read_float(float* result) {
     if (read_size < 0) {
         perror("UART proto read float");
     }
+    *result = data;
+
+    _uart_proto_destroy(&b);
+    return 0;
+}
+
+int uart_proto_read_str(char** result) {
+    _Base b;
+    _uart_proto_init(&b);
+
+    RequestPacket p = RequestPacket_init(READ_STR);
+    ssize_t packet_size = sizeof(RequestPacket);
+    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    if (written < 0) {
+        perror("UART proto write");
+    }
+    msleep(100);
+
+    size_t str_size = 0;
+    ssize_t read_size = read(b.uart0_filestream, &str_size, sizeof(char));
+    if (read_size < 0) {
+        perror("UART proto read string size");
+    }
+
+    char data[256];
+    read_size = read(b.uart0_filestream, data, str_size);
+    if (read_size < 0) {
+        perror("UART proto read string data");
+    }
+    // Código | tamanho str | conteúdo str | signature
     *result = data;
 
     _uart_proto_destroy(&b);

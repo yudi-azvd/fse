@@ -37,6 +37,7 @@ int main() {
 
     int uart_int = 0;
     float uart_float = 0;
+    char* uart_str = NULL;
     clear();
     while (1) {
         print_ui();
@@ -66,6 +67,15 @@ int main() {
             }
 
             printf("Got float: %f\n", uart_float);
+            break;
+
+        case MENU_READ_STR:
+            uart_str = NULL;
+            if (uart_proto_read_str(&uart_str)) {
+                uart_proto_perror();
+            }
+
+            printf("Got string: %s\n", uart_str);
             break;
 
         case MENU_WRITE_INT:
