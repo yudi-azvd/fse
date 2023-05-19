@@ -89,18 +89,21 @@ WriteFloatPacket WriteFloatPacket_init(float data) {
     return p;
 }
 
+#define PACKET_STR_CAPACITY 256
 #pragma pack(1)
 typedef struct WriteStrPacket {
     u8 code;
-    char* data;
+    u8 size;
+    char data[PACKET_STR_CAPACITY];
     u8 signature[4];
 } WriteStrPacket;
 
 WriteStrPacket WriteStrPacket_init(char* data) {
     WriteStrPacket p;
     init_signature(p);
-    p.code = WRITE_FLOAT;
-    p.data = data;
+    p.code = WRITE_STR;
+    p.size = strlen(data);
+    strncpy(p.data, data, PACKET_STR_CAPACITY);
     return p;
 }
 
@@ -229,9 +232,22 @@ int uart_proto_write_float(float data) {
     _Base b;
     _uart_proto_init(&b);
 
-    printf("uart_proto_write_float %f\n", data);
-
     WriteFloatPacket p = WriteFloatPacket_init(data);
+    ssize_t packet_size = sizeof(p);
+    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    if (written < 0) {
+        perror("UART proto write float");
+    }
+
+    _uart_proto_destroy(&b);
+    return 0;
+}
+
+int uart_proto_write_string(char* data) {
+    _Base b;
+    _uart_proto_init(&b);
+
+    WriteStrPacket p = WriteStrPacket_init(data);
     ssize_t packet_size = sizeof(p);
     ssize_t written = write(b.uart0_filestream, &p, packet_size);
     if (written < 0) {

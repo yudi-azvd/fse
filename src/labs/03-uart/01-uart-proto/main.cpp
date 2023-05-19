@@ -32,8 +32,7 @@ void print_ui() {
 }
 
 int main() {
-    const int INPUT_CAPACITY = 256;
-    char input[INPUT_CAPACITY] = "\0";
+    char input[PACKET_STR_CAPACITY] = "\0";
 
     int uart_int = 0;
     float uart_float = 0;
@@ -42,7 +41,7 @@ int main() {
     while (1) {
         print_ui();
 
-        fgets(input, INPUT_CAPACITY, stdin);
+        fgets(input, PACKET_STR_CAPACITY, stdin);
 
         int command = atoi(input);
         if (command < 1 || command > 7) {
@@ -80,7 +79,7 @@ int main() {
 
         case MENU_WRITE_INT:
             printf("To write: ");
-            fgets(input, INPUT_CAPACITY, stdin);
+            fgets(input, PACKET_STR_CAPACITY, stdin);
 
             uart_int = atoi(input);
             printf("Writing int: %d\n", uart_int);
@@ -92,12 +91,23 @@ int main() {
 
         case MENU_WRITE_FLOAT:
             printf("To write: ");
-            fgets(input, INPUT_CAPACITY, stdin);
+            fgets(input, PACKET_STR_CAPACITY, stdin);
 
             uart_float = atof(input);
             printf("Writing float: %f\n", uart_float);
 
             if (uart_proto_write_float(uart_float)) {
+                uart_proto_perror();
+            }
+            break;
+
+        case MENU_WRITE_STR:
+            printf("To write: ");
+            fgets(input, PACKET_STR_CAPACITY, stdin);
+
+            printf("Writing string: %s\n", input);
+
+            if (uart_proto_write_string(input)) {
                 uart_proto_perror();
             }
             break;
