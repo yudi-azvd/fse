@@ -10,6 +10,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "mssleep.h"
+
 typedef uint8_t u8;
 
 #define READ_INT 0xA1
@@ -64,10 +66,25 @@ typedef struct WriteIntPacket {
     u8 signature[4];
 } WriteIntPacket;
 
-WriteIntPacket WriteIntPacket_init(u8 code, int data) {
+WriteIntPacket WriteIntPacket_init(int data) {
     WriteIntPacket p;
     init_signature(p);
-    p.code = code;
+    p.code = WRITE_INT;
+    p.data = data;
+    return p;
+}
+
+#pragma pack(1)
+typedef struct WriteFloatPacket {
+    u8 code;
+    float data;
+    u8 signature[4];
+} WriteFloatPacket;
+
+WriteFloatPacket WriteFloatPacket_init(float data) {
+    WriteFloatPacket p;
+    init_signature(p);
+    p.code = WRITE_FLOAT;
     p.data = data;
     return p;
 }
@@ -110,13 +127,37 @@ int uart_proto_read_int(int* result) {
     ssize_t packet_size = sizeof(RequestPacket);
     ssize_t written = write(b.uart0_filestream, &p, packet_size);
     if (written < 0) {
+        perror("UART proto write int");
+    }
+
+    msleep(100);
+    int data;
+    ssize_t read_size = read(b.uart0_filestream, &data, sizeof(data));
+    if (read_size < 0) {
+        perror("UART proto read int");
+    }
+    *result = data;
+
+    _uart_proto_destroy(&b);
+    return 0;
+}
+
+int uart_proto_read_float(float* result) {
+    _Base b;
+    _uart_proto_init(&b);
+
+    RequestPacket p = RequestPacket_init(READ_FLOAT);
+    ssize_t packet_size = sizeof(RequestPacket);
+    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    if (written < 0) {
         perror("UART proto write");
     }
 
-    int data;
-    ssize_t read_size = read(b.uart0_filestream, &data, 4);
+    msleep(100);
+    float data;
+    ssize_t read_size = read(b.uart0_filestream, &data, sizeof(data));
     if (read_size < 0) {
-        perror("UART proto read");
+        perror("UART proto read float");
     }
     *result = data;
 
@@ -128,16 +169,28 @@ int uart_proto_write_int(int data) {
     _Base b;
     _uart_proto_init(&b);
 
-    WriteIntPacket p;
-    p.data = data;
-    p.code = WRITE_INT;
+    WriteIntPacket p = WriteIntPacket_init(data);
     ssize_t packet_size = sizeof(p);
     ssize_t written = write(b.uart0_filestream, &p, packet_size);
     if (written < 0) {
+        perror("UART proto write int");
     }
 
-    ssize_t read_size = read(b.uart0_filestream, &data, 4);
-    if (read_size < 0) {
+    _uart_proto_destroy(&b);
+    return 0;
+}
+
+int uart_proto_write_float(float data) {
+    _Base b;
+    _uart_proto_init(&b);
+
+    printf("uart_proto_write_float %f\n", data);
+
+    WriteFloatPacket p = WriteFloatPacket_init(data);
+    ssize_t packet_size = sizeof(p);
+    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    if (written < 0) {
+        perror("UART proto write float");
     }
 
     _uart_proto_destroy(&b);

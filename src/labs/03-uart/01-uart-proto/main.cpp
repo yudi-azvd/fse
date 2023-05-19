@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "kbhit2.h"
+#include "mssleep.h"
 #include "uart_proto.h"
 
 #define clear() printf("\033[H\033[J")
@@ -19,7 +19,6 @@ enum {
 };
 
 void print_ui() {
-    clear();
     printf("UART Proto\n\n");
     printf("1 - Read  integer\n");
     printf("2 - Read  float\n");
@@ -30,10 +29,6 @@ void print_ui() {
     printf("7 - Exit\n\n");
 
     printf("Command: ");
-
-    // uart in buffer int
-    // uart in buffer float
-    // uart in buffer string
 }
 
 int main() {
@@ -41,8 +36,9 @@ int main() {
     char input[INPUT_CAPACITY] = "\0";
 
     int uart_int = 0;
+    float uart_float = 0;
+    clear();
     while (1) {
-        clear();
         print_ui();
 
         fgets(input, INPUT_CAPACITY, stdin);
@@ -55,6 +51,7 @@ int main() {
 
         switch (command) {
         case MENU_READ_INT:
+            uart_int = -1;
             if (uart_proto_read_int(&uart_int)) {
                 uart_proto_perror();
             }
@@ -62,13 +59,35 @@ int main() {
             printf("Got integer: %d\n", uart_int);
             break;
 
+        case MENU_READ_FLOAT:
+            uart_float = -1;
+            if (uart_proto_read_float(&uart_float)) {
+                uart_proto_perror();
+            }
+
+            printf("Got float: %f\n", uart_float);
+            break;
+
         case MENU_WRITE_INT:
+            printf("To write: ");
             fgets(input, INPUT_CAPACITY, stdin);
 
             uart_int = atoi(input);
-            printf("Writing: %d\n", uart_int);
+            printf("Writing int: %d\n", uart_int);
 
             if (uart_proto_write_int(uart_int)) {
+                uart_proto_perror();
+            }
+            break;
+
+        case MENU_WRITE_FLOAT:
+            printf("To write: ");
+            fgets(input, INPUT_CAPACITY, stdin);
+
+            uart_float = atof(input);
+            printf("Writing float: %f\n", uart_float);
+
+            if (uart_proto_write_float(uart_float)) {
                 uart_proto_perror();
             }
             break;
@@ -79,7 +98,7 @@ int main() {
             break;
         }
 
-        msleep(1000);
+        printf("\n");
     }
 
     return 0;

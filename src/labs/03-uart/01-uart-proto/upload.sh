@@ -4,7 +4,7 @@ username="yudiazevedo"
 remote_path="/home/${username}/01-uart-proto"
 ipaddr1="164.41.98.16"
 ipaddr2="164.41.98.28"
-    
+        
 rsync \
     -rqptz \
     --progress --delete --delete-excluded \
