@@ -1,0 +1,4 @@
+#ifndef MODBUS_H_INCLUDED
+#define MODBUS_H_INCLUDED
+
+#endif // MODBUS_H_INCLUDED

@@ -3,8 +3,11 @@
     "triggerTaskOnSave.on": true,
     "triggerTaskOnSave.delay": 1000,
     "triggerTaskOnSave.tasks": {
-        "UART Proto upload": [
-            "src/labs/03-uart/01-uart-proto/*",
+        // "UART Proto upload": [
+        //     "src/labs/03-uart/01-uart-proto/*",
+        // ],
+        "MODBUS upload": [
+            "src/labs/03-uart/02-modbus/*",
         ]
     },
 }

@@ -13,6 +13,17 @@
                 "panel": "shared",
                 "clear": true
             },
+        },
+        {
+            "label": "MODBUS upload",
+            "type": "shell",
+            "command": "cd src/labs/03-uart/02-modbus/ && ./upload.sh",
+            "presentation": {
+                "echo": false,
+                "reveal": "silent",
+                "panel": "shared",
+                "clear": true
+            },
         }
     ]
 }
