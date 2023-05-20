@@ -34,7 +34,7 @@ void uart_proto_perror(char* msg = NULL) {
 }
 
 typedef struct _Base {
-    int uart0_filestream;
+    int uart_fd;
     termios options;
 } _Base;
 
@@ -94,7 +94,7 @@ WriteFloatPacket WriteFloatPacket_init(float data) {
 typedef struct WriteStrPacket {
     u8 code;
     u8 size;
-    char data[PACKET_STR_CAPACITY];
+    char data[PACKET_STR_CAPACITY - 1];
     u8 signature[4];
 } WriteStrPacket;
 
@@ -103,37 +103,37 @@ WriteStrPacket WriteStrPacket_init(char* data) {
     init_signature(p);
     p.code = WRITE_STR;
     p.size = strlen(data);
-    strncpy(p.data, data, PACKET_STR_CAPACITY);
+    strncpy(p.data, data, PACKET_STR_CAPACITY - 1);
     return p;
 }
 
 int _uart_proto_init(_Base* b, char* device = NULL) {
-    b->uart0_filestream = -1;
+    b->uart_fd = -1;
     if (device)
-        b->uart0_filestream = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
+        b->uart_fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
     else
-        b->uart0_filestream = open("/dev/serial0", O_RDWR | O_NOCTTY | O_NDELAY);
+        b->uart_fd = open("/dev/serial0", O_RDWR | O_NOCTTY | O_NDELAY);
 
-    if (b->uart0_filestream == -1) {
+    if (b->uart_fd == -1) {
         perror("not able to init UART");
         strncpy(uart_proto_error, UART_PROTO "not able to init UART", UART_PROTO_ERROR_SIZE);
         strncat(uart_proto_error, strerror(errno), 9);
-        return b->uart0_filestream;
+        return b->uart_fd;
     }
 
-    tcgetattr(b->uart0_filestream, &b->options);
+    tcgetattr(b->uart_fd, &b->options);
     b->options.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
     b->options.c_iflag = IGNPAR;
     b->options.c_oflag = 0;
     b->options.c_lflag = 0;
-    tcflush(b->uart0_filestream, TCIFLUSH);
-    tcsetattr(b->uart0_filestream, TCSANOW, &b->options);
+    tcflush(b->uart_fd, TCIFLUSH);
+    tcsetattr(b->uart_fd, TCSANOW, &b->options);
 
-    return b->uart0_filestream;
+    return b->uart_fd;
 }
 
 int _uart_proto_destroy(_Base* b) {
-    close(b->uart0_filestream);
+    close(b->uart_fd);
     return 0;
 }
 
@@ -143,14 +143,14 @@ int uart_proto_read_int(int* result) {
 
     RequestPacket p = RequestPacket_init(READ_INT);
     ssize_t packet_size = sizeof(RequestPacket);
-    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart_fd, &p, packet_size);
     if (written < 0) {
         perror("UART proto write int");
     }
 
     msleep(100);
     int data;
-    ssize_t read_size = read(b.uart0_filestream, &data, sizeof(data));
+    ssize_t read_size = read(b.uart_fd, &data, sizeof(data));
     if (read_size < 0) {
         perror("UART proto read int");
     }
@@ -166,14 +166,14 @@ int uart_proto_read_float(float* result) {
 
     RequestPacket p = RequestPacket_init(READ_FLOAT);
     ssize_t packet_size = sizeof(RequestPacket);
-    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart_fd, &p, packet_size);
     if (written < 0) {
         perror("UART proto write");
     }
 
     msleep(100);
     float data;
-    ssize_t read_size = read(b.uart0_filestream, &data, sizeof(data));
+    ssize_t read_size = read(b.uart_fd, &data, sizeof(data));
     if (read_size < 0) {
         perror("UART proto read float");
     }
@@ -189,20 +189,20 @@ int uart_proto_read_str(char** result) {
 
     RequestPacket p = RequestPacket_init(READ_STR);
     ssize_t packet_size = sizeof(RequestPacket);
-    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart_fd, &p, packet_size);
     if (written < 0) {
         perror("UART proto write");
     }
     msleep(100);
 
     size_t str_size = 0;
-    ssize_t read_size = read(b.uart0_filestream, &str_size, sizeof(char));
+    ssize_t read_size = read(b.uart_fd, &str_size, sizeof(char));
     if (read_size < 0) {
         perror("UART proto read string size");
     }
 
     char data[256];
-    read_size = read(b.uart0_filestream, data, str_size);
+    read_size = read(b.uart_fd, data, str_size);
     if (read_size < 0) {
         perror("UART proto read string data");
     }
@@ -219,7 +219,7 @@ int uart_proto_write_int(int data) {
 
     WriteIntPacket p = WriteIntPacket_init(data);
     ssize_t packet_size = sizeof(p);
-    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart_fd, &p, packet_size);
     if (written < 0) {
         perror("UART proto write int");
     }
@@ -234,7 +234,7 @@ int uart_proto_write_float(float data) {
 
     WriteFloatPacket p = WriteFloatPacket_init(data);
     ssize_t packet_size = sizeof(p);
-    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart_fd, &p, packet_size);
     if (written < 0) {
         perror("UART proto write float");
     }
@@ -248,14 +248,31 @@ int uart_proto_write_string(char* data) {
     _uart_proto_init(&b);
 
     WriteStrPacket p = WriteStrPacket_init(data);
-    ssize_t packet_size = sizeof(p);
-    ssize_t written = write(b.uart0_filestream, &p, packet_size);
+    ssize_t written = write(b.uart_fd, &p.code, sizeof(u8));
     if (written < 0) {
-        perror("UART proto write float");
+        perror("UART proto write code");
+    }
+
+    u8 data_size = strlen(data);
+    written = write(b.uart_fd, &data_size, sizeof(data_size));
+    if (written < 0) {
+        perror("UART proto write data size");
+    }
+
+    written = write(b.uart_fd, data, data_size);
+    if (written < 0) {
+        perror("UART proto write string");
+    }
+
+    written = write(b.uart_fd, p.signature, sizeof(p.signature));
+    if (written < 0) {
+        perror("UART proto write signature");
     }
 
     _uart_proto_destroy(&b);
     return 0;
 }
+// b o m b a
+// 1 6 4
 
 #endif // UART_PROTO_H_INCLUDED
