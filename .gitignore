@@ -3,3 +3,5 @@
 uart
 tmp
 *.dump
+
+src/labs/03-uart/02-modbus/modbus

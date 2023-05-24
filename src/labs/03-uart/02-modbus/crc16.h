@@ -1,6 +1,16 @@
 #ifndef CRC16_H_INCLUDED
 #define CRC16_H_INCLUDED
 
+/*
+ * crc16.h
+ *
+ *  Created on: 18/03/2014
+ *      Author: Renato Coral Sampaio
+ * 
+ *    Modified: ...?
+ *      Author: Yudi Yamane
+ */
+
 #include "defs.h"
 
 u16 _crc16(u16 crc, u8 data) {
@@ -40,13 +50,39 @@ u16 _crc16(u16 crc, u8 data) {
     return ((crc & 0xFF00) >> 8) ^ tbl[(crc & 0x00FF) ^ (data & 0x00FF)];
 }
 
-u16 calculate_crc(u8* commands, i32 size) {
+u16 calculate_crc(u8* buffer, i32 size) {
     i32 i;
     u16 crc = 0;
     for (i = 0; i < size; i++) {
-        crc = _crc16(crc, commands[i]);
+        crc = _crc16(crc, buffer[i]);
     }
     return crc;
 }
+
+/**
+Tentando inverter os bytes de CRC
+
+- Tentativa 4 - DEU CERTO!
+u8 byte0 = crc & 0xFF;
+crc = (byte0 << 8) | (crc >> 8);
+
+- Tentativa 3 - DEU CERTO!
+u8 byte0 = (crc >> 0) & 0xFF;
+u8 byte1 = (crc >> 8) & 0xFF;
+crc = (byte0 << 8) | byte1;
+
+- Tentativa 1 
+u8 byte0 = crc & 0x00FF;
+u8 byte1 = crc & 0xFF00;
+crc = crc & (byte1 >> 4);
+crc = crc & (byte0 << 4);
+
+- Tentativa 2 - tá errado mesmo!
+u8 byte0 = crc & 0x00FF;
+u8 byte1 = crc & 0xFF00;
+((u8*)(&crc))[0] = byte0;
+((u8*)(&crc))[1] = byte1;
+
+*/
 
 #endif // CRC16_H_INCLUDED

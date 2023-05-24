@@ -5,7 +5,8 @@
 
 typedef uint8_t u8;
 typedef uint16_t u16;
-typedef float f32;
+typedef short i16;
 typedef int i32;
+typedef float f32;
 
 #endif // DEFS_H_INCLUDED
