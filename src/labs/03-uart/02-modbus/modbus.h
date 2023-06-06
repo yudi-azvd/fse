@@ -86,13 +86,10 @@ i32 modbus_read_int(i32* result) {
     packet.address = 0x01;
     packet.code = CODE_READ;
     packet.data = SUBCODE_READ_INT;
+    packet.crc16 = calculate_crc((u8*)&packet, packet_size - sizeof(packet.crc16));
     printf("packet content ");
     print_u8_arr(packet_ptr, packet_size);
-
-    packet.crc16 = calculate_crc((u8*)&packet, packet_size - sizeof(packet.crc16));
-    // printf("packet content ");
-    // print_u8_arr(packet_ptr, packet_size);
-    // printf("         crc16 0x%04X\n", packet.crc16);
+    printf("         crc16 0x%04X\n", packet.crc16);
 
     i32 write_size = write(fd, &packet, packet_size);
     if (write_size <= 0) {
@@ -133,7 +130,7 @@ i32 modbus_read_int(i32* result) {
 i32 modbus_write_int(i32 data) {
     int return_value = 0;
     int fd = _modbus_open();
-    CHECK_FD(fd);
+    // CHECK_FD(fd);
 
     WriteNumberPacket p = {0};
     i32 packet_size = sizeof(p);
@@ -147,6 +144,10 @@ i32 modbus_write_int(i32 data) {
     packet_ptr = (u8*)&p.data;
 
     p.crc16 = calculate_crc((u8*)&p, packet_size - sizeof(p.crc16));
+    printf("packet content ");
+    print_u8_arr(packet_ptr, packet_size);
+    printf("         crc16 0x%04X\n", p.crc16);
+
     packet_ptr = (u8*)&p;
 
     int write_size = write(fd, &p, packet_size);

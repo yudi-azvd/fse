@@ -1,6 +1,6 @@
 {
     "editor.formatOnSave": true,
-    "triggerTaskOnSave.on": true,
+    // "triggerTaskOnSave.on": true,
     "triggerTaskOnSave.delay": 1000,
     "triggerTaskOnSave.tasks": {
         // "UART Proto upload": [
@@ -10,4 +10,5 @@
             "src/labs/03-uart/02-modbus/*",
         ]
     },
+    "clang-format.executable": "clang-format-10"
 }
