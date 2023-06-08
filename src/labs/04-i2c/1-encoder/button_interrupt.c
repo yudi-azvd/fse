@@ -8,7 +8,9 @@
 #include <wiringPi.h>
 
 // Which GPIO pin we're using
-#define PIN 7
+#define PIN_DT  8
+#define PIN_CLK 9
+#define PIN_SW  7
 // How much time a change must be since the last in order to count as a change
 #define IGNORE_CHANGE_BELOW_USEC 10000
 
@@ -41,22 +43,30 @@ void handle(void) {
     last_change = now;
 }
 
+void handle_encoder_turn() {
+    printf("GIrou!!!\n");
+
+    int clock_pin = digitalRead(PIN_CLK);
+    int data_pin = digitalRead(PIN_DT);
+}
+
 int main(void) {
     // Init
     wiringPiSetup();
 
     // Set pin to output in case it's not
-    pinMode(PIN, OUTPUT);
-    pullUpDnControl(PIN, PUD_UP);
+    pinMode(PIN_SW, OUTPUT);
+    pullUpDnControl(PIN_SW, PUD_UP);
 
     // Time now
     gettimeofday(&last_change, NULL);
 
     // Bind to interrupt
-    wiringPiISR(PIN, INT_EDGE_BOTH, &handle);
+    wiringPiISR(PIN_SW, INT_EDGE_BOTH, &handle);
+    wiringPiISR(PIN_CLK, INT_EDGE_FALLING, &handle_encoder_turn);
 
     // Get initial state of pin
-    state = digitalRead(PIN);
+    state = digitalRead(PIN_SW);
 
     if (state) {
         printf("Started! Initial state is on\n");
