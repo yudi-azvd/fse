@@ -1,1 +1,1 @@
-gcc main.c -lbcm2835
+g++ encoder.c -lwiringPi

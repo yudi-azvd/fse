@@ -27,10 +27,10 @@ def ler_encoder(channel):
     if estado_CLK != estado_anterior_CLK:
         if estado_DT != estado_CLK:
             contador += 1
-            print("girou pra horario")
+            print("girou pra      horario", contador)
         else:
             contador -= 1
-            print("girou pra anti-horario")
+            print("girou pra anti-horario", contador)
 
     estado_anterior_CLK = estado_CLK
 
@@ -40,7 +40,7 @@ def lidar_com_botao(channel):
 
 # Configuração das interrupções para os pinos do encoder e do botão
 GPIO.add_event_detect(CLK_PIN, GPIO.BOTH, callback=ler_encoder)
-GPIO.add_event_detect(SW_PIN, GPIO.FALLING, callback=lidar_com_botao, bouncetime=300)
+GPIO.add_event_detect(SW_PIN, GPIO.FALLING, callback=lidar_com_botao, bouncetime=150)
 
 # Loop principal do programa
 try:

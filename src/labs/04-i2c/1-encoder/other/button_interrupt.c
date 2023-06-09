@@ -17,7 +17,7 @@
 // Current state of the pin
 static volatile int state;
 // Time of last change
-struct timeval last_change;
+struct timeval enc_last_turn;
 
 // Handler for interrupt
 void handle(void) {
@@ -27,7 +27,7 @@ void handle(void) {
     gettimeofday(&now, NULL);
 
     // Time difference in usec
-    diff = (now.tv_sec * 1000000 + now.tv_usec) - (last_change.tv_sec * 1000000 + last_change.tv_usec);
+    diff = (now.tv_sec * 1000000 + now.tv_usec) - (enc_last_turn.tv_sec * 1000000 + enc_last_turn.tv_usec);
 
     // Filter jitter
     if (diff > IGNORE_CHANGE_BELOW_USEC) {
@@ -40,7 +40,7 @@ void handle(void) {
         state = !state;
     }
 
-    last_change = now;
+    enc_last_turn = now;
 }
 
 void handle_encoder_turn() {
@@ -59,7 +59,7 @@ int main(void) {
     pullUpDnControl(PIN_SW, PUD_UP);
 
     // Time now
-    gettimeofday(&last_change, NULL);
+    gettimeofday(&enc_last_turn, NULL);
 
     // Bind to interrupt
     wiringPiISR(PIN_SW, INT_EDGE_BOTH, &handle);
