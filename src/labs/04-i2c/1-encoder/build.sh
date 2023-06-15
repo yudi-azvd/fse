@@ -1,1 +1,1 @@
-g++ encoder.c -lwiringPi
+gcc encoder.c -lwiringPi -lpthread

@@ -1,15 +1,15 @@
-// Adaptado de
-// https://github.com/phil-lavin/raspberry-pi-gpio-interrupt
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <wiringPi.h>
 
 // Which GPIO pin we're using
 // How much time a change must be since the last in order to count as a change
-#define IGNORE_CHANGE_BELOW_USEC 10'000
+#define IGNORE_CHANGE_BELOW_USEC 10000
 
 #define ENC_CW  1
 #define ENC_CCW 0
@@ -21,6 +21,8 @@ int prev_cl = 0;
 int ENC_PIN_DT;
 int ENC_PIN_CL;
 int ENC_PIN_SW;
+
+pthread_mutex_t enc_mutex;
 
 static volatile int enc_switch;
 
@@ -52,6 +54,7 @@ void encoder_init(int pin_dt, int pin_cl, int pin_sw) {
     ENC_PIN_CL = pin_cl;
     ENC_PIN_DT = pin_dt;
     ENC_PIN_SW = pin_sw;
+    pthread_mutex_init(&enc_mutex, NULL);
 
     pinMode(pin_cl, INPUT);
     pullUpDnControl(pin_cl, PUD_UP);
@@ -61,7 +64,7 @@ void encoder_init(int pin_dt, int pin_cl, int pin_sw) {
     pullUpDnControl(pin_sw, PUD_UP);
 
     wiringPiISR(pin_sw, INT_EDGE_RISING, &handle_switch);
-    // wiringPiISR(pin_dt, INT_EDGE_BOTH, &handle_encoder_turn);
+    wiringPiISR(pin_dt, INT_EDGE_BOTH, &handle_encoder_turn);
     wiringPiISR(pin_cl, INT_EDGE_BOTH, &handle_encoder_turn);
 
     int cl = digitalRead(ENC_PIN_CL);
@@ -71,65 +74,86 @@ void encoder_init(int pin_dt, int pin_cl, int pin_sw) {
     prev_dt_cl = dt << 1 | cl;
 }
 
-// void handle_encoder_turn() {
-//     struct timeval now;
-//     gettimeofday(&now, NULL);
-//     unsigned long time_value = now.tv_sec * 1'000'000 + now.tv_usec;
+int call_counter = 0;
 
-//     int cl = digitalRead(ENC_PIN_CL);
-//     int dt = digitalRead(ENC_PIN_DT);
-//     int new_dt_cl = dt << 1 | cl;
-//     // printf("  %lu | prev %x, new %x\n", time_value, prev_dt_cl, new_dt_cl);
-//     if (new_dt_cl == prev_dt_cl)
-//         return;
-
-//     // Pra descobrir esse padrão, basta girar o encoder
-//     int transition = (prev_dt_cl << 2) | new_dt_cl;
-//     switch (transition) {
-//     case 0b0111:
-//     case 0b1110:
-//     case 0b1000:
-//     case 0b0001:
-//         enc_direction = ENC_CW;
-//         enc_turn++;
-//         break;
-//     case 0b1011:
-//     case 0b1101:
-//     case 0b0100:
-//     case 0b0010:
-//         enc_direction = ENC_CCW;
-//         enc_turn--;
-//         break;
-//     default:
-//         printf("??\n");
-//         break;
-//     }
-
-//     char dir = enc_direction == ENC_CW ? 'H' : 'A';
-//     printf("Girou %c! %d %d. Turns %d\n", dir, dt, cl, enc_turn);
-//     // printf("Girou! %d %d\n", dt, cl);
-//     prev_dt_cl = new_dt_cl;
-// }
-
-int events = 0;
+// https://www.youtube.com/watch?v=0dAcabcoKvg
 void handle_encoder_turn() {
+    pthread_mutex_lock(&enc_mutex);
+    call_counter++;
+    unsigned int local_call_counter = call_counter;
+
     int cl = digitalRead(ENC_PIN_CL);
     int dt = digitalRead(ENC_PIN_DT);
 
-    if (cl != prev_cl) {
-        if (dt != cl) {
-            enc_turn++;
-            enc_direction = ENC_CW;
-        } else {
-            enc_turn--;
-            enc_direction = ENC_CCW;
-        }
+    int new_dt_cl = (dt << 1) | cl;
+
+    if (new_dt_cl == prev_dt_cl) {
+        pthread_mutex_unlock(&enc_mutex);
+        return;
     }
 
-    printf("turns %d, events %d, dir %d \n", enc_turn, events, enc_direction);
+    int transition = (prev_dt_cl << 2) | new_dt_cl;
 
-    prev_cl = cl;
+    if (!(local_call_counter & 1)) {
+        // Pra descobrir esse padrão, basta girar o encoder
+        switch (transition) {
+        case 0b0111:
+        case 0b1110:
+        case 0b1000:
+        case 0b0001:
+            enc_direction = ENC_CW;
+            enc_turn++;
+            break;
+        case 0b1011:
+        case 0b1101:
+        case 0b0100:
+        case 0b0010:
+            enc_direction = ENC_CCW;
+            enc_turn--;
+            break;
+        default:
+            printf("??\n");
+            break;
+        }
+        char dir = enc_direction == ENC_CW ? 'H' : 'A';
+        printf("Girou %c! %d %d. Turns %d\n", dir, dt, cl, enc_turn);
+    } else {
+        // char dir = enc_direction == ENC_CW ? 'H' : 'A';
+        // printf("Girou %c! %d %d. Turns %d\n", dir, dt, cl, enc_turn);
+    }
+
+    // printf("Girou! %d %d\n", dt, cl);
+    prev_dt_cl = new_dt_cl;
+    pthread_mutex_unlock(&enc_mutex);
 }
+
+#define TURN_USEC_THRESHOLD 10000
+int events = 0;
+// void handle_encoder_turn() {
+//     int cl = digitalRead(ENC_PIN_CL);
+//     int dt = digitalRead(ENC_PIN_DT);
+
+//     struct timeval now;
+//     gettimeofday(&now, NULL);
+//     unsigned long diff = +(now.tv_sec * 1000000 + now.tv_usec) //
+//                          - (enc_last_turn.tv_sec * 1000000 + enc_last_turn.tv_usec);
+
+//     if (cl != prev_cl && diff > TURN_USEC_THRESHOLD) {
+//         // if (diff > TURN_USEC_THRESHOLD) {
+//         if (dt != cl) {
+//             enc_turn++;
+//             enc_direction = ENC_CW;
+//         } else {
+//             enc_turn--;
+//             enc_direction = ENC_CCW;
+//         }
+//         events++;
+//     }
+
+//     memcpy(&enc_last_turn, &now, sizeof(struct timeval));
+//     printf("turns %d, events %d, dir %d \n", enc_turn, events, enc_direction);
+//     prev_cl = cl;
+// }
 
 int main() {
     if (wiringPiSetup()) {
